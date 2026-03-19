@@ -17,7 +17,7 @@
     // Database wrapper for offline storage
     const OfflineDB = {
         dbName: 'QRAttendanceDB',
-        dbVersion: 2,
+        dbVersion: 3,
         db: null,
 
         async init() {
@@ -139,7 +139,15 @@
             const transaction = this.db.transaction(['students'], 'readwrite');
             const store = transaction.objectStore('students');
             for (const student of students) {
-                store.put(student);
+                try {
+                    await new Promise((resolve, reject) => {
+                        const request = store.put(student);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                } catch (e) {
+                    console.error('Error caching student:', student, e);
+                }
             }
         },
 
@@ -149,7 +157,10 @@
                 const transaction = this.db.transaction(['students'], 'readonly');
                 const store = transaction.objectStore('students');
                 const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
+                request.onsuccess = () => {
+                    console.log('Cached students:', request.result);
+                    resolve(request.result);
+                };
                 request.onerror = () => reject(request.error);
             });
         },
@@ -159,7 +170,15 @@
             const transaction = this.db.transaction(['subjects'], 'readwrite');
             const store = transaction.objectStore('subjects');
             for (const subject of subjects) {
-                store.put(subject);
+                try {
+                    await new Promise((resolve, reject) => {
+                        const request = store.put(subject);
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject(request.error);
+                    });
+                } catch (e) {
+                    console.error('Error caching subject:', subject, e);
+                }
             }
         },
 
@@ -169,7 +188,10 @@
                 const transaction = this.db.transaction(['subjects'], 'readonly');
                 const store = transaction.objectStore('subjects');
                 const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
+                request.onsuccess = () => {
+                    console.log('Cached subjects:', request.result);
+                    resolve(request.result);
+                };
                 request.onerror = () => reject(request.error);
             });
         },
