@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-lg-6">
         <div class="card">
             <div class="card-header text-center">
                 <h3 class="mb-0">
@@ -13,15 +13,6 @@
                 <p class="mb-0 mt-2 opacity-75">امسح QR code الطالب لتسجيل حضوره تلقائياً</p>
             </div>
             <div class="card-body p-4">
-                <!-- ✅ مؤشر السجلات المعلقة -->
-                <div id="pendingBadge" class="d-none alert alert-warning py-2 px-3 mb-3" style="border-radius:10px;">
-                    <i class="fas fa-clock me-2"></i>
-                    <span id="pendingCount">0</span> سجل حضور محفوظ offline - سيتم الرفع تلقائياً عند الاتصال
-                    <button class="btn btn-sm btn-warning ms-2" onclick="syncPendingAttendance()">
-                        <i class="fas fa-sync me-1"></i>زامن الآن
-                    </button>
-                </div>
-
                 <!-- ✅ المرحلة الدراسية -->
                 <div class="mb-3">
                     <label for="gradeSelect" class="form-label fw-bold">
@@ -35,7 +26,7 @@
                         <option value="الرابعة">الرابعة</option>
                     </select>
                 </div>
-
+                
                 <!-- ✅ نوع الكورس -->
                 <div class="mb-3">
                     <label for="courseSelect" class="form-label fw-bold">
@@ -45,7 +36,7 @@
                         <option value="" selected disabled>اختر المرحلة أولاً</option>
                     </select>
                 </div>
-
+                
                 <!-- ✅ المادة -->
                 <div class="mb-4">
                     <label for="subjectSelect" class="form-label fw-bold">
@@ -55,40 +46,27 @@
                         <option value="" selected disabled>اختر الكورس أولاً</option>
                     </select>
                 </div>
-
-                <!-- ✅ مربع توجيه المستخدم -->
-                <div id="scanGuide" class="scan-guide-box mb-3" onclick="startScanner()">
-                    <div class="guide-content">
-                        <i class="fas fa-qrcode fa-3x text-primary mb-3"></i>
-                        <p class="mb-0 fw-bold">اضغط لبدء المسح</p>
-                        <small class="text-muted">او اختر المادة اولاً</small>
-                    </div>
-                </div>
-
-                <!-- ✅ الماسح -->
-                <div id="scannerContainer" class="scanner-container d-none">
+                
+                <!-- Scanner -->
+                <div class="scanner-container">
                     <div id="reader"></div>
-                    <!-- ✅ مربع المسح - 4 زوايا بيضاء -->
-                    <div class="scan-frame">
-
-                    </div>
                 </div>
-
-                <!-- ✅ زر بدء/إيقاف المسح -->
+                
+                <!-- Scanner Controls -->
                 <div class="text-center mt-3">
-                    <button class="btn btn-primary btn-lg w-100" id="startBtn" onclick="startScanner()">
+                    <button class="btn btn-primary" id="startBtn" onclick="startScanner()">
                         <i class="fas fa-play me-2"></i>بدء المسح
                     </button>
-                    <button class="btn btn-danger btn-lg w-100 d-none" id="stopBtn" onclick="stopScanner()">
+                    <button class="btn btn-danger d-none" id="stopBtn" onclick="stopScanner()">
                         <i class="fas fa-stop me-2"></i>إيقاف المسح
                     </button>
                 </div>
-
+                
                 <!-- Manual Entry by Name -->
                 <div class="mt-4">
                     <hr>
                     <p class="text-center text-muted">أو تسجيل الحضور يدوياً بالاسم</p>
-
+                    
                     <div class="input-group mb-2">
                         <span class="input-group-text"><i class="fas fa-search"></i></span>
                         <input type="text" class="form-control" id="studentSearch" 
@@ -106,30 +84,32 @@
     </div>
 </div>
 
-<!-- ✅ Recent Scans -->
+<!-- Recent Scans -->
 <div class="row mt-4">
     <div class="col-12">
-        <div class="card scans-card">
-            <div class="card-header scans-header">
+        <div class="card">
+            <div class="card-header">
                 <h5 class="mb-0">
                     <i class="fas fa-history me-2"></i>آخر عمليات المسح
                 </h5>
             </div>
-            <div class="card-body scans-body p-2">
+            <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover table-sm scans-table" id="recentScansTable">
+                    <table class="table table-hover" id="recentScansTable">
                         <thead>
                             <tr>
                                 <th>الوقت</th>
-                                <th>الكود</th>
+                                <th>رقم الطالب</th>
                                 <th>الاسم</th>
                                 <th>المادة</th>
+                                <th>الأستاذ</th>
+                                <th>الكورس</th>
                                 <th>الحالة</th>
                             </tr>
                         </thead>
                         <tbody id="recentScansBody">
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-3">لا توجد عمليات مسح</td>
+                                <td colspan="7" class="text-center text-muted">لا توجد عمليات مسح حديثة</td>
                             </tr>
                         </tbody>
                     </table>
@@ -142,211 +122,110 @@
 
 {% block extra_css %}
 <style>
-/* ✅ مربع التوجيه */
-.scan-guide-box {
-    width: 100%;
-    max-width: 400px;
-    margin: 0 auto 15px;
-    padding: 30px 20px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border: 3px dashed #667eea;
-    border-radius: 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.scan-guide-box:hover {
-    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
-    border-color: #764ba2;
-    transform: translateY(-2px);
-}
-
-.guide-content i {
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-}
-
-/* ✅ الماسح - الحاوية */
-.scanner-container {
-    position: relative;
-    width: 100%;
-    max-width: 500px;
-    margin: 0 auto 20px;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-
 #reader {
-    width: 100% !important;
-    height: 400px !important;
-    background: #000;
+    border-radius: 15px;
+    overflow: hidden;
+    border: 3px solid #667eea;
 }
 
 #reader video {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover;
-}
-
-/* ✅ مربع المسح - 4 زوايا بيضاء */
-.scan-frame {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 250px;
-    height: 250px;
-    pointer-events: none;
-    z-index: 10;
-}
-
-.corner {
-    position: absolute;
-    width: 40px;
-    height: 40px;
-    border-color: #ffffff;
-    border-style: solid;
-    border-width: 0;
-    box-shadow: 0 0 10px rgba(255,255,255,0.5);
-}
-
-.corner.top-left {
-    top: 0;
-    left: 0;
-    border-top-width: 5px;
-    border-left-width: 5px;
-    border-top-left-radius: 10px;
-}
-
-.corner.top-right {
-    top: 0;
-    right: 0;
-    border-top-width: 5px;
-    border-right-width: 5px;
-    border-top-right-radius: 10px;
-}
-
-.corner.bottom-left {
-    bottom: 0;
-    left: 0;
-    border-bottom-width: 5px;
-    border-left-width: 5px;
-    border-bottom-left-radius: 10px;
-}
-
-.corner.bottom-right {
-    bottom: 0;
-    right: 0;
-    border-bottom-width: 5px;
-    border-right-width: 5px;
-    border-bottom-right-radius: 10px;
-}
-
-/* ✅ خط المسح المتحرك */
-.scan-frame::after {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #00ff00, transparent);
-    top: 0;
-    left: 0;
-    animation: scan 2s linear infinite;
-}
-
-@keyframes scan {
-    0% { top: 0; opacity: 0; }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { top: 100%; opacity: 0; }
-}
-
-/* ✅ الجدول */
-.scans-card {
     border-radius: 15px;
-    overflow: hidden;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-    margin: 0 15px;
 }
 
-.scans-header {
+.scanner-container {
+    position: relative;
+}
+
+#recentScansTable th {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    padding: 15px 20px;
-}
-
-.scans-header h5 {
-    font-size: 1.1rem;
-}
-
-.scans-body {
-    background: #fff;
-}
-
-.scans-table {
-    margin: 0;
-    font-size: 0.9rem;
-}
-
-.scans-table thead th {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    font-weight: 600;
-    padding: 12px 8px;
-    border: none;
-    font-size: 0.85rem;
-    text-align: center;
-}
-
-.scans-table tbody td {
-    padding: 12px 8px;
-    text-align: center;
-    border-bottom: 1px solid #e9ecef;
-    vertical-align: middle;
-}
-
-.scans-table tbody tr:hover {
-    background: rgba(102, 126, 234, 0.08);
-}
-
-.scans-table tbody tr.table-success {
-    background-color: #d1e7dd !important;
-}
-
-.scans-table tbody tr.table-danger {
-    background-color: #f8d7da !important;
-}
-
-.offline-badge {
-    background-color: #ffc107;
-    color: #000;
-    font-size: 0.65rem;
-    padding: 2px 6px;
-    border-radius: 10px;
-    margin-left: 5px;
-    font-weight: bold;
-}
-
-.d-none {
-    display: none !important;
 }
 
 .swal2-rtl {
     font-family: 'Cairo', sans-serif !important;
     direction: rtl !important;
 }
+
+.swal2-center-modal {
+    border-radius: 20px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.swal2-title-custom {
+    font-size: 1.6rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 15px !important;
+}
+
+.swal2-content-custom {
+    font-size: 1.2rem !important;
+    line-height: 1.6 !important;
+}
+
+.swal2-toast {
+    display: none !important;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translate3d(0, -30px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes fadeOutUp {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+        transform: translate3d(0, -30px, 0);
+    }
+}
+
+.animate__animated {
+    animation-duration: 0.5s;
+    animation-fill-mode: both;
+}
+
+.animate__fadeInDown {
+    animation-name: fadeInDown;
+}
+
+.animate__fadeOutUp {
+    animation-name: fadeOutUp;
+}
+
+.animate__faster {
+    animation-duration: 0.3s;
+}
+
+#studentSelect {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#studentSelect option {
+    padding: 10px;
+    cursor: pointer;
+}
+
+#studentSelect option:hover {
+    background-color: #e9ecef;
+}
+
+select:disabled {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
 </style>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
 let html5QrCode = null;
 let isScanning = false;
@@ -354,102 +233,51 @@ let recentScans = [];
 let isProcessing = false;
 let allStudents = [];
 let allSubjects = [];
-let lastScanResult = null;
-let lastScanTime = {};
-
-const COOLDOWN_MINUTES = 15;
 
 document.addEventListener('DOMContentLoaded', function() {
     html5QrCode = new Html5Qrcode("reader");
     loadStudentsList();
     loadAllSubjects();
-    updatePendingBadge();
-
-    // ✅ لما يرجع الإنترنت - زامن تلقائياً
-    window.addEventListener('online', function() {
-        console.log('[Scanner] Internet restored - syncing...');
-        syncPendingAttendance();
-    });
-
-    // ✅ لما تفتح الصفحة وعندك إنترنت - زامن أي بيانات معلقة
-    if (navigator.onLine) {
-        setTimeout(syncPendingAttendance, 2000);
-    }
+    
+    // مزامنة عند رجوع الإنترنت
+    window.addEventListener('online', syncPendingAttendance);
+    if (navigator.onLine) setTimeout(syncPendingAttendance, 2000);
 });
 
-// ✅ مزامنة الحضور المحفوظ offline مع السيرفر
 async function syncPendingAttendance() {
     const pending = JSON.parse(localStorage.getItem('pendingAttendance') || '[]');
     if (pending.length === 0) return;
-
-    console.log('[Sync] Found', pending.length, 'pending records');
-
+    
     let synced = 0;
-    let failed = 0;
     const remaining = [];
-
+    
     for (const record of pending) {
-        // ✅ تجاهل السجلات القديمة اللي ما عندها qr_data
-        if (!record.qr_data || !record.subject_id) {
-            console.warn('[Sync] Skipping invalid record (no qr_data):', record);
-            synced++;
-            continue;
-        }
-
+        if (!record.qr_data || !record.subject_id) { synced++; continue; }
         try {
-            // ✅ cache: 'no-store' يتجاوز الـ Service Worker
             const response = await fetch('/api/scan-qr', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                cache: 'no-store',
-                body: JSON.stringify({
-                    qr_data: record.qr_data,
-                    subject_id: parseInt(record.subject_id)
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ qr_data: record.qr_data, subject_id: parseInt(record.subject_id) })
             });
-
             const data = await response.json();
-
-            if (data.success || data.message?.includes('مسبقاً')) {
-                synced++;
-            } else {
-                remaining.push(record);
-                failed++;
-            }
-        } catch (e) {
-            remaining.push(record);
-            break;
-        }
+            if (data.success || response.status === 400) synced++;
+            else remaining.push(record);
+        } catch(e) { remaining.push(record); break; }
     }
-
+    
     localStorage.setItem('pendingAttendance', JSON.stringify(remaining));
-    updatePendingBadge();
-
-    if (synced > 0) {
-        Swal.fire({
-            title: '🔄 تمت المزامنة',
-            html: `تم رفع <b>${synced}</b> سجل حضور offline للسيرفر بنجاح`,
-            icon: 'success',
-            timer: 4000,
-            showConfirmButton: false
-        });
-        console.log('[Sync] Synced:', synced, 'Failed:', failed);
-    }
+    if (synced > 0) showToast(`تمت مزامنة ${synced} سجل حضور`, 'success');
 }
 
-// ✅ تحديث مؤشر السجلات المعلقة
-function updatePendingBadge() {
-    const pending = JSON.parse(localStorage.getItem('pendingAttendance') || '[]');
-    const badge = document.getElementById('pendingBadge');
-    const count = document.getElementById('pendingCount');
-    if (pending.length > 0) {
-        badge.classList.remove('d-none');
-        count.textContent = pending.length;
-    } else {
-        badge.classList.add('d-none');
+async function loadAllSubjects() {
+    try {
+        const response = await fetch('/api/get-subjects');
+        const data = await response.json();
+        if (data.success) {
+            allSubjects = data.subjects;
+        }
+    } catch (error) {
+        console.error('Error loading subjects:', error);
     }
 }
 
@@ -458,407 +286,230 @@ async function loadStudentsList() {
         const response = await fetch('/api/get-students');
         const data = await response.json();
         if (data.success) {
-            allStudents = data.students || [];
-            localStorage.setItem('cachedStudents', JSON.stringify(allStudents));
-            console.log('✅ Students loaded:', allStudents.length);
+            allStudents = data.students;
         }
     } catch (error) {
-        console.error('❌ Error loading students:', error);
-        const cached = localStorage.getItem('cachedStudents');
-        if (cached) {
-            allStudents = JSON.parse(cached);
-            console.log('📦 Loaded from cache:', allStudents.length);
-        }
+        console.error('Error loading students:', error);
     }
 }
 
-async function loadAllSubjects() {
-    try {
-        const response = await fetch('/api/get-subjects');
-        const data = await response.json();
-        if (data.success) {
-            allSubjects = data.subjects || [];
-            localStorage.setItem('cachedSubjects', JSON.stringify(allSubjects));
-            console.log('✅ Subjects loaded:', allSubjects.length);
-        }
-    } catch (error) {
-        console.error('❌ Error loading subjects:', error);
-        const cached = localStorage.getItem('cachedSubjects');
-        if (cached) {
-            allSubjects = JSON.parse(cached);
-            console.log('📦 Loaded from cache:', allSubjects.length);
-        }
-    }
-}
-
+// ✅ عند تغيير المرحلة
 function onGradeChange() {
     const gradeSelect = document.getElementById('gradeSelect');
     const courseSelect = document.getElementById('courseSelect');
     const subjectSelect = document.getElementById('subjectSelect');
-
+    const selectedGrade = gradeSelect.value;
+    
+    // تفريغ الكورس والمادة
     courseSelect.innerHTML = '<option value="" selected disabled>اختر نوع الكورس</option>';
     subjectSelect.innerHTML = '<option value="" selected disabled>اختر الكورس أولاً</option>';
     subjectSelect.disabled = true;
-
-    if (!gradeSelect.value) {
+    
+    if (!selectedGrade) {
         courseSelect.disabled = true;
         return;
     }
-
+    
+    // ✅ إضافة خيارات الكورس
     courseSelect.innerHTML += `
         <option value="أول">كورس أول</option>
         <option value="ثاني">كورس ثاني</option>
     `;
+    
     courseSelect.disabled = false;
 }
 
+// ✅ عند تغيير الكورس
 function onCourseChange() {
     const gradeSelect = document.getElementById('gradeSelect');
     const courseSelect = document.getElementById('courseSelect');
     const subjectSelect = document.getElementById('subjectSelect');
-
+    
+    const selectedGrade = gradeSelect.value;
+    const selectedCourse = courseSelect.value;
+    
     subjectSelect.innerHTML = '<option value="" selected disabled>اختر المادة</option>';
-
-    if (!courseSelect.value) {
+    
+    if (!selectedCourse) {
         subjectSelect.disabled = true;
         return;
     }
-
-    const filtered = allSubjects.filter(s => {
-        return (s.grade || 'الأولى') === gradeSelect.value && 
-               (s.course_type || 'أول') === courseSelect.value;
+    
+    // ✅ فلترة حسب المرحلة AND الكورس
+    const filteredSubjects = allSubjects.filter(subject => {
+        const subjectGrade = subject.grade || 'الأولى';
+        const subjectCourse = subject.course_type || subject.department || 'أول';
+        return subjectGrade === selectedGrade && subjectCourse === selectedCourse;
     });
-
-    if (filtered.length === 0) {
-        subjectSelect.innerHTML += '<option disabled>لا توجد مواد</option>';
+    
+    if (filteredSubjects.length === 0) {
+        subjectSelect.innerHTML += '<option disabled>لا توجد مواد لهذا الكورس</option>';
         subjectSelect.disabled = true;
     } else {
-        filtered.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s.id;
-            opt.textContent = s.name;
-            opt.setAttribute('data-teacher', s.teacher_name || '');
-            opt.setAttribute('data-course', `كورس ${courseSelect.value}`);
-            opt.setAttribute('data-name', s.name);
-            subjectSelect.appendChild(opt);
+        const courseType = `كورس ${selectedCourse}`;
+        filteredSubjects.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject.id;
+            option.textContent = `${subject.name} (${courseType})`;
+            option.setAttribute('data-teacher', subject.teacher_name);
+            option.setAttribute('data-course', courseType);
+            subjectSelect.appendChild(option);
         });
         subjectSelect.disabled = false;
     }
 }
 
 function searchStudents() {
-    const term = document.getElementById('studentSearch').value.trim().toLowerCase();
+    const searchTerm = document.getElementById('studentSearch').value.trim().toLowerCase();
     const select = document.getElementById('studentSelect');
-    const btn = document.getElementById('registerByNameBtn');
-
-    if (term.length < 2) {
+    const registerBtn = document.getElementById('registerByNameBtn');
+    
+    if (searchTerm.length < 2) {
         select.style.display = 'none';
-        btn.disabled = true;
+        registerBtn.disabled = true;
         return;
     }
-
+    
     const filtered = allStudents.filter(s => 
-        s.full_name && s.full_name.toLowerCase().includes(term)
+        s.full_name.toLowerCase().includes(searchTerm)
     );
-
+    
     if (filtered.length === 0) {
-        select.innerHTML = '<option disabled>لا يوجد طلاب</option>';
+        select.innerHTML = '<option disabled>لا يوجد طلاب بهذا الاسم</option>';
         select.style.display = 'block';
-        btn.disabled = true;
+        registerBtn.disabled = true;
         return;
     }
-
+    
     select.innerHTML = filtered.map(s => 
-        `<option value="${s.student_code}" data-code="${s.student_code}" data-name="${s.full_name}">
-            ${s.full_name} - ${s.student_code}
+        `<option value="${s.student_code}" data-code="${s.student_code}">
+            ${s.full_name} - ${s.student_code} (${s.group_name})
         </option>`
     ).join('');
-
+    
     select.style.display = 'block';
     select.size = Math.min(filtered.length + 1, 6);
-    btn.disabled = false;
+    registerBtn.disabled = false;
 }
 
 async function registerByName() {
     const select = document.getElementById('studentSelect');
-    const option = select.options[select.selectedIndex];
-
-    if (!option?.value) {
-        showToast('اختر طالباً', 'warning');
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (!selectedOption || !selectedOption.value) {
+        showToast('الرجاء اختيار طالب من القائمة', 'warning');
         return;
     }
-
+    
+    const studentCode = selectedOption.getAttribute('data-code');
     const subjectId = document.getElementById('subjectSelect').value;
+    
     if (!subjectId) {
-        showToast('اختر المادة أولاً', 'error');
+        showToast('الرجاء اختيار المادة أولاً', 'error');
         return;
     }
-
-    const studentCode = option.getAttribute('data-code');
-    await processAttendance(`CODE:${studentCode}`, subjectId);
-
+    
+    const qrData = `CODE:${studentCode}`;
+    await processAttendance(qrData, subjectId);
+    
+    // مسح الحقول بعد التسجيل
     document.getElementById('studentSearch').value = '';
     select.style.display = 'none';
+    select.innerHTML = '<option disabled>اختر الطالب...</option>';
     document.getElementById('registerByNameBtn').disabled = true;
 }
 
-// ✅ بدء الماسح
 async function startScanner() {
     const subjectId = document.getElementById('subjectSelect').value;
     if (!subjectId) {
-        showToast('اختر المادة أولاً', 'error');
+        showToast('الرجاء اختيار المادة أولاً', 'error');
         return;
     }
-
+    
     try {
-        document.getElementById('scanGuide').classList.add('d-none');
-        document.getElementById('scannerContainer').classList.remove('d-none');
-        document.getElementById('startBtn').classList.add('d-none');
-        document.getElementById('stopBtn').classList.remove('d-none');
-
         await html5QrCode.start(
             { facingMode: "environment" },
             {
                 fps: 10,
-                qrbox: { width: 250, height: 250 },
+                qrbox: { width: 250, height: 250 }
             },
             onScanSuccess,
             onScanFailure
         );
-
+        
         isScanning = true;
-
+        document.getElementById('startBtn').classList.add('d-none');
+        document.getElementById('stopBtn').classList.remove('d-none');
+        
+        showToast('تم تشغيل الماسح بنجاح', 'success');
+        
     } catch (error) {
-        console.error('Scanner error:', error);
-        showToast('خطأ في تشغيل الكاميرا', 'error');
-        stopScannerUI();
+        console.error('Error starting scanner:', error);
+        showToast('حدث خطأ في تشغيل الكاميرا. تأكد من السماح بالوصول للكاميرا.', 'error');
     }
 }
 
-function stopScannerUI() {
-    document.getElementById('scanGuide').classList.remove('d-none');
-    document.getElementById('scannerContainer').classList.add('d-none');
-    document.getElementById('startBtn').classList.remove('d-none');
-    document.getElementById('stopBtn').classList.add('d-none');
-}
-
-// ✅ إيقاف الماسح
 async function stopScanner() {
     if (html5QrCode && isScanning) {
-        try {
-            await html5QrCode.stop();
-        } catch(e) {
-            console.log('Stop error:', e);
-        }
+        await html5QrCode.stop();
         isScanning = false;
-        lastScanResult = null;
-        stopScannerUI();
+        document.getElementById('startBtn').classList.remove('d-none');
+        document.getElementById('stopBtn').classList.add('d-none');
+        showToast('تم إيقاف الماسح', 'info');
     }
 }
 
-// ✅ معالجة نجاح المسح
 async function onScanSuccess(decodedText, decodedResult) {
     if (isProcessing) return;
-    if (lastScanResult === decodedText) return;
-
-    let studentCode = '';
-    if (decodedText.includes('CODE:')) {
-        const match = decodedText.match(/CODE:([^|]+)/);
-        if (match) studentCode = match[1].trim();
-    } else {
-        studentCode = decodedText.trim();
-    }
-
-    const now = Date.now();
-    const lastTime = lastScanTime[studentCode];
-
-    if (lastTime) {
-        const diffMinutes = (now - lastTime) / (1000 * 60);
-        if (diffMinutes < COOLDOWN_MINUTES) {
-            const remaining = Math.ceil(COOLDOWN_MINUTES - diffMinutes);
-            Swal.fire({
-                title: '⏳ فترة المنع',
-                html: `<p>يرجى الانتظار <strong>${remaining} دقيقة</strong></p>`,
-                icon: 'warning',
-                confirmButtonText: 'حسناً',
-                timer: 3000
-            });
-            return;
-        }
-    }
-
     isProcessing = true;
-    lastScanResult = decodedText;
-    lastScanTime[studentCode] = now;
-
-    await html5QrCode.pause();
-
+    
     const subjectId = document.getElementById('subjectSelect').value;
-    await processAttendance(decodedText, subjectId);
-
-    setTimeout(async () => {
-        isProcessing = false;
-        lastScanResult = null;
-        if (isScanning) {
-            await html5QrCode.resume();
+    
+    Swal.fire({
+        title: '⏳ جاري التسجيل...',
+        text: 'يرجى الانتظار',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
         }
-    }, 3000);
+    });
+    
+    await processAttendance(decodedText, subjectId);
+    
+    setTimeout(() => {
+        isProcessing = false;
+    }, 1500);
 }
 
 function onScanFailure(error) {
-    // تجاهل الأخطاء العادية
+    console.warn(`QR scan failed: ${error}`);
 }
 
-// ✅ معالجة الحضور - مصححة بالكامل
 async function processAttendance(qrData, subjectId) {
-    console.log('Processing attendance:', { qrData, subjectId });
-
-    // استخراج كود الطالب
-    let studentCode = qrData;
-    if (qrData.includes('CODE:')) {
-        const match = qrData.match(/CODE:([^|]+)/);
-        if (match) studentCode = match[1].trim();
-    }
-    studentCode = studentCode.trim();
-
-    // البحث عن الطالب
-    const student = allStudents.find(s => 
-        s.student_code === studentCode || 
-        s.qr_code === qrData ||
-        s.code === studentCode
-    );
-
-    // البحث عن المادة
-    const subject = allSubjects.find(s => 
-        s.id == subjectId || 
-        s.id === parseInt(subjectId)
-    );
-
-    console.log('Found:', { student, subject });
-
-    // ✅ حالة عدم الاتصال (Offline)
-    if (!navigator.onLine) {
-        if (!student) {
-            showToast('الطالب غير موجود في القائمة المحلية', 'error');
-            addToRecentScans({
-                student: { full_name: 'غير معروف', student_code: studentCode },
-                subject: subject || { name: 'غير معروف' }
-            }, false);
-            return;
-        }
-
-        const record = {
-            qr_data: qrData,
-            subject_id: parseInt(subjectId),
-            student_id: student.id,
-            timestamp: new Date().toISOString(),
-            synced: false
-        };
-
-        try {
-            const pending = JSON.parse(localStorage.getItem('pendingAttendance') || '[]');
-            pending.push({...record, id: Date.now()});
-            localStorage.setItem('pendingAttendance', JSON.stringify(pending));
-            updatePendingBadge();
-
-            Swal.fire({
-                title: '✅ تم التسجيل',
-                html: `<b>${student.full_name}</b><br><small>محفوظ محلياً (Offline)</small>`,
-                icon: 'success',
-                timer: 3000,
-                showConfirmButton: false
-            });
-
-            addToRecentScans({student, subject}, true);
-
-        } catch (e) {
-            showToast('فشل الحفظ المحلي', 'error');
-        }
-        return;
-    }
-
-    // ✅ حالة الاتصال (Online) - إرسال للسيرفر
     try {
         const response = await fetch('/api/scan-qr', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                qr_data: qrData,
-                subject_id: parseInt(subjectId)
-            })
+            body: JSON.stringify({ qr_data: qrData, subject_id: parseInt(subjectId) })
         });
-
-        const data = await response.json();
-        console.log('Server response:', data);
-
-        if (data.success) {
-            // ✅ استخدام البيانات المرجعة من السيرفر أو البحث محلياً
-            const responseStudent = data.student || student;
-            const responseSubject = data.subject || subject;
-
-            showToast(data.message || 'تم التسجيل بنجاح', 'success');
-            addToRecentScans({
-                student: responseStudent,
-                subject: responseSubject
-            }, true);
-        } else {
-            // ✅ التعديل هنا: التحقق من حالة التسجيل المسبق
-            if (data.already_registered || data.message?.includes('مسبقاً') || data.message?.includes('already') || data.message?.includes('registered')) {
-                Swal.fire({
-                    title: '⚠️ تسجيل مسبق',
-                    html: `<p>تم تسجيل الطالب <b>${data.student?.full_name || student?.full_name || 'غير معروف'}</b> مسبقاً في هذه المادة</p>`,
-                    icon: 'warning',
-                    confirmButtonText: 'حسناً',
-                    timer: 3000,
-                    showConfirmButton: false
-                });
-                
-                addToRecentScans({
-                    student: data.student || student || { full_name: data.student?.full_name || student?.full_name || 'غير معروف', student_code: studentCode },
-                    subject: data.subject || subject || { name: 'غير معروف' }
-                }, false);
-            } else if (data.cooldown_active) {
-                Swal.fire({
-                    title: '⏳ فترة المنع',
-                    text: data.message,
-                    icon: 'warning'
-                });
-            } else {
-                showToast(data.message || 'فشل التسجيل', 'error');
-                addToRecentScans({
-                    student: data.student || student || { full_name: 'غير معروف', student_code: studentCode },
-                    subject: data.subject || subject || { name: 'غير معروف' }
-                }, false);
-            }
-        }
-
-    } catch (error) {
-        console.error('Network error:', error);
         
-        // ✅ التعديل هنا: التحقق مما إذا كان الخطأ من السيرفر (ليس مشكلة اتصال)
-        // إذا كان هناك استجابة من السيرفر ولكنها غير ناجحة، لا تعاملها كـ "Offline"
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            // ✅ هذا خطأ اتصال فعلي - الحفظ المحلي
-            showToast('خطأ في الاتصال، جاري الحفظ محلياً', 'warning');
-
-            if (student) {
-                const record = {
-                    qr_data: qrData,
-                    subject_id: parseInt(subjectId),
-                    student_id: student.id,
-                    timestamp: new Date().toISOString(),
-                    synced: false
-                };
-                const pending = JSON.parse(localStorage.getItem('pendingAttendance') || '[]');
-                pending.push({...record, id: Date.now()});
-                localStorage.setItem('pendingAttendance', JSON.stringify(pending));
-
-                addToRecentScans({student, subject}, true);
-            }
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            addToRecentScans(data, true);
         } else {
-            // ✅ خطأ آخر (قد يكون من السيرفر)
-            showToast('حدث خطأ، يرجى المحاولة مرة أخرى', 'error');
+            showToast(data.message, 'error');
+            addToRecentScans(data, false);
         }
+        
+    } catch (error) {
+        // offline - احفظ محلياً
+        const pending = JSON.parse(localStorage.getItem('pendingAttendance') || '[]');
+        pending.push({ qr_data: qrData, subject_id: parseInt(subjectId), id: Date.now() });
+        localStorage.setItem('pendingAttendance', JSON.stringify(pending));
+        showToast('لا يوجد اتصال - تم الحفظ محلياً وسيرسل عند الاتصال', 'warning');
     }
 }
 
@@ -866,61 +517,93 @@ function showToast(message, type = 'success') {
     const titles = {
         'success': '✅ نجاح',
         'error': '❌ خطأ', 
-        'warning': '⚠️ تنبيه'
+        'warning': '⚠️ تنبيه',
+        'info': 'ℹ️ معلومة'
+    };
+    
+    const colors = {
+        'success': '#28a745',
+        'error': '#dc3545',
+        'warning': '#ffc107',
+        'info': '#17a2b8'
     };
 
     Swal.fire({
-        title: titles[type],
+        title: titles[type] || 'تنبيه',
         text: message,
         icon: type,
-        timer: 2500,
+        position: 'center',
+        showConfirmButton: true,
+        confirmButtonText: 'حسناً',
+        confirmButtonColor: colors[type] || '#667eea',
+        timer: 2000,
         timerProgressBar: true,
-        showConfirmButton: false
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        customClass: {
+            popup: 'swal2-rtl swal2-center-modal',
+            title: 'swal2-title-custom',
+            htmlContainer: 'swal2-content-custom'
+        },
+        showClass: {
+            popup: 'animate__animated animate__fadeInDown animate__faster'
+        },
+        hideClass: {
+            popup: 'animate__animated animate__fadeOutUp animate__faster'
+        }
     });
 }
 
 function addToRecentScans(data, success) {
     const tbody = document.getElementById('recentScansBody');
-    if (recentScans.length === 0) tbody.innerHTML = '';
-
-    // ✅ التأكد من وجود البيانات
-    const studentName = data.student?.full_name || data.student?.name || 'غير معروف';
-    const studentCode = data.student?.student_code || data.student?.code || '------';
-    const subjectName = data.subject?.name || 'غير معروف';
-
-    console.log('Adding to table:', { studentName, studentCode, subjectName, success });
-
-    recentScans.unshift({
-        time: new Date().toLocaleTimeString('ar-IQ', {hour: '2-digit', minute: '2-digit'}),
-        code: studentCode.slice(-6),
-        name: studentName,
-        subject: subjectName,
-        success,
-        offline: !navigator.onLine
-    });
-
-    if (recentScans.length > 10) recentScans.pop();
+    
+    if (recentScans.length === 0) {
+        tbody.innerHTML = '';
+    }
+    
+    const subjectSelect = document.getElementById('subjectSelect');
+    const selectedOption = subjectSelect.options[subjectSelect.selectedIndex];
+    const courseType = selectedOption ? selectedOption.getAttribute('data-course') : 'غير معروف';
+    
+    const scan = {
+        time: new Date().toLocaleTimeString('ar-IQ'),
+        code: data.student ? data.student.student_code : 'غير معروف',
+        name: data.student ? data.student.full_name : 'غير معروف',
+        subject: data.subject ? data.subject.name : 'غير معروف',
+        teacher: data.subject ? data.subject.teacher_name : 'غير معروف',
+        course: courseType,
+        success: success
+    };
+    
+    recentScans.unshift(scan);
+    if (recentScans.length > 10) {
+        recentScans.pop();
+    }
+    
     updateRecentScansTable();
 }
 
 function updateRecentScansTable() {
     const tbody = document.getElementById('recentScansBody');
-
+    
     if (recentScans.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">لا توجد عمليات</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">لا توجد عمليات مسح حديثة</td></tr>';
         return;
     }
-
+    
     tbody.innerHTML = recentScans.map(scan => `
         <tr class="${scan.success ? 'table-success' : 'table-danger'}">
-            <td>
-                ${scan.offline ? '<span class="offline-badge">Off</span>' : ''}
-                ${scan.time}
-            </td>
+            <td>${scan.time}</td>
             <td><span class="badge bg-primary">${scan.code}</span></td>
-            <td class="fw-bold">${scan.name}</td>
+            <td><strong>${scan.name}</strong></td>
             <td>${scan.subject}</td>
-            <td class="fw-bold fs-5">${scan.success ? '✓' : '✗'}</td>
+            <td><span class="badge bg-info">${scan.teacher}</span></td>
+            <td><span class="badge bg-warning text-dark">${scan.course}</span></td>
+            <td>
+                ${scan.success 
+                    ? '<span class="badge bg-success"><i class="fas fa-check me-1"></i>نجاح</span>' 
+                    : '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>فشل</span>'}
+            </td>
         </tr>
     `).join('');
 }
