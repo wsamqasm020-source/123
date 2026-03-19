@@ -3,7 +3,7 @@
  * يدعم العمل الكامل بدون إنترنت
  */
 
-const CACHE_NAME = 'attendance-v5';
+const CACHE_NAME = 'attendance-v9';
 
 // كل الملفات اللي تحتاجها الصفحات للعمل offline
 const STATIC_ASSETS = [
@@ -17,14 +17,25 @@ const STATIC_ASSETS = [
   '/static/icons/icon-512x512.png'
 ];
 
+// صفحات HTML اللي نخزنها للـ offline
+const HTML_PAGES = [
+  '/login',
+  '/scanner',
+  '/generate',
+  '/students',
+  '/subjects',
+  '/attendance',
+  '/settings'
+];
+
 // ===== INSTALL =====
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing v4...');
+  console.log('[SW] Installing v2...');
   self.skipWaiting();
 
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      // ✅ فقط الملفات الثابتة - لا نخزن صفحات HTML هنا لأن Flask يعمل redirects
+      // خزّن الملفات الثابتة
       for (const url of STATIC_ASSETS) {
         try {
           const response = await fetch(url, { cache: 'no-cache' });
@@ -36,6 +47,20 @@ self.addEventListener('install', (event) => {
           console.warn('[SW] Could not cache:', url);
         }
       }
+
+      // خزّن صفحات HTML - نتجاهل أي redirect
+      for (const url of HTML_PAGES) {
+        try {
+          const response = await fetch(url, { cache: 'no-cache' });
+          if (response.ok && response.type === 'basic') {
+            await cache.put(url, response);
+            console.log('[SW] Cached page:', url);
+          }
+        } catch (e) {
+          console.warn('[SW] Could not cache page:', url);
+        }
+      }
+
       console.log('[SW] Pre-caching done');
     })
   );
@@ -72,19 +97,26 @@ self.addEventListener('fetch', (event) => {
 
   // ===== صفحات HTML: شبكة أولاً، كاش ثانياً =====
   if (event.request.mode === 'navigate') {
+    // ✅ تجاهل logout و login - Flask يعمل redirect فيها
+    if (url.pathname === '/logout' || url.pathname === '/login' || url.pathname === '/') {
+      return;
+    }
+
     event.respondWith(
-      fetch(event.request, { redirect: 'follow' })
+      fetch(event.request)
         .then(response => {
-          // ✅ فقط خزّن GET requests - POST ممنوع بالكاش
-          if (response.ok && event.request.method === 'GET') {
+          // ✅ فقط خزّن الردود الناجحة وليست redirects
+          if (response.ok && response.status === 200 && response.type === 'basic') {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+            caches.open(CACHE_NAME).then(cache => {
+              try { cache.put(event.request, clone); } catch(e) {}
+            });
           }
           return response;
         })
         .catch(async () => {
           console.log('[SW] Offline - serving from cache:', url.pathname);
-          const cached = await caches.match(event.request);
+          const cached = await caches.match(url.pathname);
           if (cached) return cached;
 
           // جرب الصفحة الرئيسية
@@ -104,9 +136,6 @@ self.addEventListener('fetch', (event) => {
   }
 
   // ===== ملفات ثابتة: كاش أولاً، شبكة ثانياً =====
-  // ✅ فقط GET requests
-  if (event.request.method !== 'GET') return;
-
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
@@ -120,6 +149,7 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
+          // إذا صورة، ارجع صورة placeholder
           if (event.request.destination === 'image') {
             return new Response('', { status: 404 });
           }
