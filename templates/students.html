@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+
+{% block title %}قائمة الطلاب - نظام تسجيل الحضور{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="text-white">
+            <i class="fas fa-users me-2"></i>قائمة الطلاب
+        </h2>
+    </div>
+    <div class="col-md-4 text-md-start">
+        <a href="{{ url_for('generate_page') }}" class="btn btn-light">
+            <i class="fas fa-plus me-2"></i>إضافة طالب جديد
+        </a>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" class="form-control" id="searchInput" placeholder="بحث بالاسم أو الرقم...">
+        </div>
+    </div>
+    
+    <!-- ✅ القسم العلمي - قائمة منسدلة -->
+    <div class="col-md-3">
+        <select class="form-select" id="deptFilter">
+            <option value="">القسم العلمي...</option>
+            <option value="الأمن السيبراني">الأمن السيبراني</option>
+        </select>
+    </div>
+    
+    <!-- ✅ المرحلة الدراسية - قائمة منسدلة -->
+    <div class="col-md-3">
+        <select class="form-select" id="teacherFilter">
+            <option value="">المرحلة الدراسية...</option>
+            <option value="الأولى">الأولى</option>
+            <option value="الثانية">الثانية</option>
+            <option value="الثالثة">الثالثة</option>
+            <option value="الرابعة">الرابعة</option>
+        </select>
+    </div>
+    
+    <!-- ✅ نوع الدراسة - قائمة منسدلة -->
+    <div class="col-md-3">
+        <select class="form-select" id="groupFilter">
+            <option value="">نوع الدراسة...</option>
+            <option value="صباحي">صباحي</option>
+            <option value="مسائي">مسائي</option>
+        </select>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12 text-center">
+        <button class="btn btn-outline-light" onclick="applyFilters()">
+            <i class="fas fa-filter me-2"></i>تطبيق الفلتر
+        </button>
+        <button class="btn btn-outline-light ms-2" onclick="clearFilters()">
+            <i class="fas fa-undo me-2"></i>مسح الفلتر
+        </button>
+    </div>
+</div>
+
+<!-- Students Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="studentsTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>رقم الطالب</th>
+                        <th>الاسم</th>
+                        <th>القسم</th>
+                        <th>المرحلة الدراسية</th>
+                        <th>نوع الدراسة</th>
+                        <th>تاريخ الإضافة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr data-dept="{{ student.department }}" data-teacher="{{ student.teacher_name }}" data-group="{{ student.group_name }}">
+                        <td>{{ loop.index }}</td>
+                        <td><span class="badge bg-primary">{{ student.student_code }}</span></td>
+                        <td><strong>{{ student.full_name }}</strong></td>
+                        <td>{{ student.department }}</td>
+                        <td><span class="badge bg-info">{{ student.teacher_name }}</span></td>
+                        <td><span class="badge bg-warning text-dark">{{ student.group_name }}</span></td>
+                        <td>{{ student.created_at }}</td>
+                        <td>
+                            <a href="{{ url_for('student_detail', student_id=student.id) }}" 
+                               class="btn btn-sm btn-info text-white" title="عرض التفاصيل">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <button class="btn btn-sm btn-danger" title="حذف"
+                                    onclick="deleteStudent('{{ student.id }}', '{{ student.full_name }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">لا يوجد طلاب مسجلين</p>
+                            <a href="{{ url_for('generate_page') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>إضافة طالب
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mt-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stats-card">
+            <div class="stats-number" id="totalCount">{{ students|length }}</div>
+            <p class="text-muted mb-0">إجمالي الطلاب</p>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stats-card">
+            <div class="stats-number" id="deptCount">0</div>
+            <p class="text-muted mb-0">أقسام مختلفة</p>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stats-card">
+            <div class="stats-number" id="teacherCount">0</div>
+            <p class="text-muted mb-0">مراحل دراسية</p>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="stats-card">
+            <div class="stats-number" id="groupCount">0</div>
+            <p class="text-muted mb-0">أنواع دراسة</p>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>تأكيد الحذف
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-trash-alt fa-4x text-danger mb-3"></i>
+                <p>هل أنت متأكد من حذف الطالب <strong id="deleteStudentName"></strong>؟</p>
+                <p class="text-muted">هذا الإجراء لا يمكن التراجع عنه.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i>حذف
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let studentToDelete = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateStats();
+});
+
+function applyFilters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const deptFilter = document.getElementById('deptFilter').value;
+    const teacherFilter = document.getElementById('teacherFilter').value;
+    const groupFilter = document.getElementById('groupFilter').value;
+    
+    const rows = document.querySelectorAll('#studentsTable tbody tr');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        if (row.querySelector('td[colspan]')) return;
+        
+        const name = row.cells[2].textContent.toLowerCase();
+        const code = row.cells[1].textContent.toLowerCase();
+        const dept = row.getAttribute('data-dept');
+        const teacher = row.getAttribute('data-teacher');
+        const group = row.getAttribute('data-group');
+        
+        const matchesSearch = name.includes(searchTerm) || code.includes(searchTerm);
+        const matchesDept = !deptFilter || dept === deptFilter;
+        const matchesTeacher = !teacherFilter || teacher === teacherFilter;
+        const matchesGroup = !groupFilter || group === groupFilter;
+        
+        if (matchesSearch && matchesDept && matchesTeacher && matchesGroup) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    document.getElementById('totalCount').textContent = visibleCount;
+}
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('deptFilter').value = '';
+    document.getElementById('teacherFilter').value = '';
+    document.getElementById('groupFilter').value = '';
+    
+    const rows = document.querySelectorAll('#studentsTable tbody tr');
+    rows.forEach(row => {
+        row.style.display = '';
+    });
+    
+    updateStats();
+}
+
+function updateStats() {
+    const rows = document.querySelectorAll('#studentsTable tbody tr');
+    const departments = new Set();
+    const teachers = new Set();
+    const groups = new Set();
+    
+    rows.forEach(row => {
+        if (row.querySelector('td[colspan]')) return;
+        
+        departments.add(row.getAttribute('data-dept'));
+        teachers.add(row.getAttribute('data-teacher'));
+        groups.add(row.getAttribute('data-group'));
+    });
+    
+    document.getElementById('deptCount').textContent = departments.size;
+    document.getElementById('teacherCount').textContent = teachers.size;
+    document.getElementById('groupCount').textContent = groups.size;
+}
+
+function deleteStudent(id, name) {
+    studentToDelete = id;
+    document.getElementById('deleteStudentName').textContent = name;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
+    if (!studentToDelete) return;
+    
+    try {
+        const response = await fetch(`/api/delete-student/${studentToDelete}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+            location.reload();
+        } else {
+            alert('حدث خطأ أثناء الحذف');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('حدث خطأ في الاتصال بالخادم');
+    }
+});
+</script>
+{% endblock %}
