@@ -651,6 +651,10 @@
                     offlineIndicator.classList.add('show');
                     connectionStatus.textContent = 'غير متصل';
                     connectionStatus.className = 'badge bg-danger';
+                    // ✅ تختفي تلقائياً بعد 3 ثواني
+                    setTimeout(() => {
+                        offlineIndicator.classList.remove('show');
+                    }, 3000);
                 }
             }
             
