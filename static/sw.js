@@ -65,6 +65,9 @@ self.addEventListener('fetch', (event) => {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
   if (url.origin !== location.origin) return;
 
+  // ===== لا تتدخل في تسجيل الخروج =====
+  if (url.pathname === '/logout') return;
+
   // ===== API: لا تتدخل - اتركها تروح للسيرفر مباشرة =====
   if (url.pathname.startsWith('/api/')) {
     return; // ✅ الـ SW ما يتدخل بأي طلب API
