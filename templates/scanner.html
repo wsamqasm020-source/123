@@ -621,14 +621,6 @@ async function startScanner() {
             {
                 fps: 10,
                 qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0,
-                videoConstraints: {
-                    facingMode: { exact: "environment" },
-                    width: { min: 640, ideal: 1920, max: 2560 },
-                    height: { min: 480, ideal: 1080, max: 1440 },
-                    focusMode: "continuous",
-                    advanced: [{ zoom: 1.0 }]
-                }
             },
             onScanSuccess,
             onScanFailure
