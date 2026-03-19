@@ -378,154 +378,65 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ✅ مزامنة الحضور المحفوظ offline مع السيرفر
-let isSyncing = false;
-
 async function syncPendingAttendance() {
-    if (isSyncing) {
-        console.log('[Sync] Already syncing...');
-        Swal.fire({
-            title: '⏳ المزامنة جارية',
-            text: 'الرجاء الانتظار...',
-            icon: 'warning',
-            timer: 2000
-        });
-        return;
-    }
-
     const pending = JSON.parse(localStorage.getItem('pendingAttendance') || '[]');
-    if (pending.length === 0) {
-        Swal.fire({
-            title: '✅ لا توجد سجلات معلقة',
-            text: 'جميع السجلات تم رفعها بنجاح',
-            icon: 'info',
-            confirmButtonText: 'حسناً'
-        });
-        return;
-    }
+    if (pending.length === 0) return;
 
-    isSyncing = true;
-    console.log('[Sync] Started... Found', pending.length, 'pending records');
-    console.log('[Sync] Online:', navigator.onLine);
-
-    // 🔄 إظهار رسالة "جاري المزامنة"
-    Swal.fire({
-        title: '⏳ جاري المزامنة',
-        html: `يتم رفع <b>${pending.length}</b> سجل حضور...`,
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
+    console.log('[Sync] Found', pending.length, 'pending records');
 
     let synced = 0;
     let failed = 0;
-    let errors = [];
     const remaining = [];
 
     for (const record of pending) {
+        // ✅ تجاهل السجلات القديمة اللي ما عندها qr_data
         if (!record.qr_data || !record.subject_id) {
-            console.warn('[Sync] Invalid record - deleting:', record);
+            console.warn('[Sync] Skipping invalid record (no qr_data):', record);
             synced++;
             continue;
         }
 
-        const payload = {
-            qr_data: String(record.qr_data).trim(),
-            subject_id: parseInt(record.subject_id)
-        };
-
-        console.log('[Sync] Sending:', payload);
-
         try {
-            // ✅ مع timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 ثانية
-
+            // ✅ cache: 'no-store' يتجاوز الـ Service Worker
             const response = await fetch('/api/scan-qr', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                signal: controller.signal
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                cache: 'no-store',
+                body: JSON.stringify({
+                    qr_data: record.qr_data,
+                    subject_id: parseInt(record.subject_id)
+                })
             });
 
-            clearTimeout(timeoutId);
+            const data = await response.json();
 
-            console.log('[Sync] Status:', response.status);
-            
-            let data;
-            try {
-                data = await response.json();
-            } catch (e) {
-                console.error('[Sync] JSON Parse Error:', e);
-                errors.push('خطأ في قراءة الرد من السيرفر');
-                remaining.push(record);
-                failed++;
-                continue;
-            }
-
-            console.log('[Sync] Response:', data);
-
-            if (data?.success) {
+            if (data.success || data.message?.includes('مسبقاً')) {
                 synced++;
-                console.log('[Sync] ✅ Synced');
-            } else if (data?.already_registered || data?.message?.includes('مسبقاً')) {
-                synced++;
-                console.log('[Sync] ✅ Already registered');
-            } else if (response.status === 404) {
-                synced++;
-                console.log('[Sync] ✅ Student not found - deleting');
-            } else if (response.status === 400) {
-                synced++;
-                console.log('[Sync] ✅ Bad request - deleting');
             } else {
                 remaining.push(record);
                 failed++;
-                errors.push(data?.message || 'خطأ غير معروف');
-                console.log('[Sync] ❌ Failed');
             }
         } catch (e) {
-            console.error('[Sync] Catch Error:', e);
             remaining.push(record);
-            failed++;
-
-            if (e.name === 'AbortError') {
-                errors.push('انتهت مهلة الوقت (timeout)');
-            } else {
-                errors.push(e.message || 'خطأ اتصال');
-            }
+            break;
         }
     }
 
     localStorage.setItem('pendingAttendance', JSON.stringify(remaining));
     updatePendingBadge();
-    isSyncing = false;
 
-    // ✅ رسالة النتيجة النهائية
-    if (synced > 0 && failed === 0) {
+    if (synced > 0) {
         Swal.fire({
-            title: '✅ تمت المزامنة بنجاح',
-            html: `تم رفع جميع <b>${synced}</b> سجل حضور`,
+            title: '🔄 تمت المزامنة',
+            html: `تم رفع <b>${synced}</b> سجل حضور offline للسيرفر بنجاح`,
             icon: 'success',
-            confirmButtonText: 'حسناً'
+            timer: 4000,
+            showConfirmButton: false
         });
-        console.log('[Sync] SUCCESS');
-    } else if (synced > 0 && failed > 0) {
-        Swal.fire({
-            title: '⚠️ مزامنة جزئية',
-            html: `<b>تم رفع:</b> ${synced}<br><b>فشل:</b> ${failed}<br><small>${errors.slice(0, 3).join('<br>')}</small>`,
-            icon: 'warning',
-            confirmButtonText: 'حسناً'
-        });
-        console.log('[Sync] PARTIAL');
-    } else if (failed > 0) {
-        Swal.fire({
-            title: '❌ فشلت المزامنة',
-            html: `<b>الأخطاء:</b><br>${errors.slice(0, 5).join('<br>')}<br><br><b>تحقق من:</b><br>✓ الاتصال بالإنترنت<br>✓ السيرفر يعمل (http://localhost:5000)<br>✓ تسجيل دخول`,
-            icon: 'error',
-            confirmButtonText: 'حسناً'
-        });
-        console.log('[Sync] FAILED - Errors:', errors);
+        console.log('[Sync] Synced:', synced, 'Failed:', failed);
     }
 }
 
@@ -708,12 +619,15 @@ async function startScanner() {
         await html5QrCode.start(
             { facingMode: "environment" },
             {
-                fps: 15,
+                fps: 10,
                 qrbox: { width: 250, height: 250 },
                 aspectRatio: 1.0,
                 videoConstraints: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
+                    facingMode: { exact: "environment" },
+                    width: { min: 640, ideal: 1920, max: 2560 },
+                    height: { min: 480, ideal: 1080, max: 1440 },
+                    focusMode: "continuous",
+                    advanced: [{ zoom: 1.0 }]
                 }
             },
             onScanSuccess,
@@ -882,18 +796,10 @@ async function processAttendance(qrData, subjectId) {
             })
         });
 
-        let data;
-        try {
-            data = await response.json();
-        } catch(parseError) {
-            console.error('JSON Parse Error:', parseError);
-            showToast('خطأ في استجابة السيرفر - تنسيق غير صحيح', 'error');
-            return;
-        }
+        const data = await response.json();
+        console.log('Server response:', data);
 
-        console.log('Server response:', response.status, data);
-
-        if (data && data.success) {
+        if (data.success) {
             // ✅ استخدام البيانات المرجعة من السيرفر أو البحث محلياً
             const responseStudent = data.student || student;
             const responseSubject = data.subject || subject;
@@ -905,7 +811,7 @@ async function processAttendance(qrData, subjectId) {
             }, true);
         } else {
             // ✅ التعديل هنا: التحقق من حالة التسجيل المسبق
-            if (data?.already_registered || data?.message?.includes('مسبقاً') || data?.message?.includes('already') || data?.message?.includes('registered')) {
+            if (data.already_registered || data.message?.includes('مسبقاً') || data.message?.includes('already') || data.message?.includes('registered')) {
                 Swal.fire({
                     title: '⚠️ تسجيل مسبق',
                     html: `<p>تم تسجيل الطالب <b>${data.student?.full_name || student?.full_name || 'غير معروف'}</b> مسبقاً في هذه المادة</p>`,
@@ -919,18 +825,17 @@ async function processAttendance(qrData, subjectId) {
                     student: data.student || student || { full_name: data.student?.full_name || student?.full_name || 'غير معروف', student_code: studentCode },
                     subject: data.subject || subject || { name: 'غير معروف' }
                 }, false);
-            } else if (data?.cooldown_active) {
+            } else if (data.cooldown_active) {
                 Swal.fire({
                     title: '⏳ فترة المنع',
-                    text: data.message || 'يرجى الانتظار قبل المحاولة مرة أخرى',
+                    text: data.message,
                     icon: 'warning'
                 });
             } else {
-                const errorMsg = data?.message || 'فشل التسجيل - خطأ غير متوقع';
-                showToast(errorMsg, 'error');
+                showToast(data.message || 'فشل التسجيل', 'error');
                 addToRecentScans({
-                    student: data?.student || student || { full_name: 'غير معروف', student_code: studentCode },
-                    subject: data?.subject || subject || { name: 'غير معروف' }
+                    student: data.student || student || { full_name: 'غير معروف', student_code: studentCode },
+                    subject: data.subject || subject || { name: 'غير معروف' }
                 }, false);
             }
         }
@@ -939,6 +844,7 @@ async function processAttendance(qrData, subjectId) {
         console.error('Network error:', error);
         
         // ✅ التعديل هنا: التحقق مما إذا كان الخطأ من السيرفر (ليس مشكلة اتصال)
+        // إذا كان هناك استجابة من السيرفر ولكنها غير ناجحة، لا تعاملها كـ "Offline"
         if (error.name === 'TypeError' && error.message.includes('fetch')) {
             // ✅ هذا خطأ اتصال فعلي - الحفظ المحلي
             showToast('خطأ في الاتصال، جاري الحفظ محلياً', 'warning');
@@ -959,8 +865,7 @@ async function processAttendance(qrData, subjectId) {
             }
         } else {
             // ✅ خطأ آخر (قد يكون من السيرفر)
-            console.error('Error details:', error.message);
-            showToast('حدث خطأ في السيرفر: ' + error.message, 'error');
+            showToast('حدث خطأ، يرجى المحاولة مرة أخرى', 'error');
         }
     }
 }
