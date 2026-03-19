@@ -3,7 +3,7 @@
  * يدعم العمل الكامل بدون إنترنت
  */
 
-const CACHE_NAME = 'attendance-v9';
+const CACHE_NAME = 'attendance-v10';
 
 // كل الملفات اللي تحتاجها الصفحات للعمل offline
 const STATIC_ASSETS = [
@@ -14,42 +14,36 @@ const STATIC_ASSETS = [
   '/students',
   '/subjects',
   '/generate',
-  '/student-detail',
   '/settings',
   '/offline.html',
   '/static/css/style.css',
   '/static/css/bootstrap.min.css',
   '/static/js/app.js',
   '/static/js/bootstrap.bundle.min.js',
-  '/static/js/html5-qrcode.min.js',
-  '/static/icons/icon-192x192.png',
-  '/static/icons/icon-512x512.png'
+  '/static/js/html5-qrcode.min.js'
 ];
 
 // ===== INSTALL =====
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing v4...');
+  console.log('[SW] Installing...');
   self.skipWaiting();
 
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      // ✅ حفظ الملفات الأساسية فقط (بدون icons قد لا تكون موجودة)
-      const essentialAssets = STATIC_ASSETS.filter(url => !url.includes('/icons/'));
-      
-      for (const url of essentialAssets) {
+      for (const url of STATIC_ASSETS) {
         try {
           const response = await fetch(url, { cache: 'no-cache' });
           if (response.ok) {
             await cache.put(url, response);
-            console.log('[SW] Cached:', url);
+            console.log('[SW] ✅ Cached:', url);
           } else {
-            console.warn('[SW] Failed to cache:', url, 'Status:', response.status);
+            console.warn('[SW] ⚠️ Failed to cache:', url, 'Status:', response.status);
           }
         } catch (e) {
-          console.warn('[SW] Could not cache:', url, e.message);
+          console.warn('[SW] ⚠️ Could not fetch:', url, '-', e.message);
         }
       }
-      console.log('[SW] Pre-caching done');
+      console.log('[SW] Pre-caching completed');
     })
   );
 });
@@ -78,8 +72,9 @@ self.addEventListener('fetch', (event) => {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
   if (url.origin !== location.origin) return;
 
-  // ===== لا تتدخل في تسجيل الدخول والخروج والإعدادات =====
-  if (url.pathname === '/login' || url.pathname === '/logout' || url.pathname === '/update-settings') return;
+  // ===== لا تتدخل في صفحات حساسة (POST requests) =====
+  if (url.pathname === '/login' || url.pathname === '/logout' || 
+      url.pathname === '/update-settings' || url.pathname === '/settings') return;
 
   // ===== API: لا تتدخل - اتركها تروح للسيرفر مباشرة =====
   if (url.pathname.startsWith('/api/')) {
@@ -91,36 +86,29 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request, { redirect: 'follow' })
         .then(response => {
-          // ✅ فقط خزّن GET requests - POST ممنوع بالكاش
           if (response.ok && event.request.method === 'GET') {
             const clone = response.clone();
             caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, clone);
-              console.log('[SW] Cached page:', url.pathname);
+              cache.put(event.request, clone).catch(e => console.warn('[SW] Cache error:', e.message));
             });
           }
           return response;
         })
         .catch(async () => {
-          console.log('[SW] Offline - serving from cache:', url.pathname);
-          
-          // جرب الصفحة المطلوبة من الـ cache
+          console.log('[SW] Offline - trying cache for:', event.request.url);
           const cached = await caches.match(event.request);
-          if (cached) return cached;
-
-          // إذا فشلت، جرب الصفحة الرئيسية
+          if (cached) {
+            console.log('[SW] Serving from cache:', event.request.url);
+            return cached;
+          }
+          
+          // جرب الصفحة الرئيسية
           const root = await caches.match('/');
-          if (root) {
-            console.log('[SW] Serving home page from cache');
-            return root;
-          }
+          if (root) return root;
 
-          // جرب صفحة offline
+          // صفحة offline كملاذ أخير
           const offline = await caches.match('/offline.html');
-          if (offline) {
-            console.log('[SW] Serving offline page');
-            return offline;
-          }
+          if (offline) return offline;
 
           return new Response('<h1 style="font-family:Arial;text-align:center;margin-top:100px;direction:rtl">غير متصل بالإنترنت</h1>',
             { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
@@ -131,11 +119,10 @@ self.addEventListener('fetch', (event) => {
   }
 
   // ===== ملفات ثابتة: كاش أولاً، شبكة ثانياً =====
-  // ✅ فقط GET requests
   if (event.request.method !== 'GET') return;
 
-  // تجاهل الملفات الديناميكية والـ uploads
-  if (url.pathname.startsWith('/static/uploads/')) {
+  // تجاهل الملفات الديناميكية
+  if (url.pathname.includes('/uploads/') || url.pathname.includes('/static/uploads/')) {
     return;
   }
 
@@ -145,11 +132,15 @@ self.addEventListener('fetch', (event) => {
 
       return fetch(event.request)
         .then(response => {
-          // فقط احفظ الملفات الثابتة الصغيرة (CSS, JS)
-          if (response && response.ok && (url.pathname.endsWith('.css') || url.pathname.endsWith('.js'))) {
+          // احفظ فقط CSS و JS والملفات الثابتة الصغيرة
+          if (response && response.ok && (
+            url.pathname.endsWith('.css') || 
+            url.pathname.endsWith('.js') ||
+            url.pathname.startsWith('/static/icons/')
+          )) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, clone).catch(e => console.warn('[SW] Could not cache:', url.pathname, e.message));
+              cache.put(event.request, clone).catch(() => {});
             });
           }
           return response;
