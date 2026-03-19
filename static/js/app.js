@@ -154,6 +154,26 @@
             });
         },
 
+        async cacheSubjects(subjects) {
+            if (!this.db) await this.init();
+            const transaction = this.db.transaction(['subjects'], 'readwrite');
+            const store = transaction.objectStore('subjects');
+            for (const subject of subjects) {
+                store.put(subject);
+            }
+        },
+
+        async getCachedSubjects() {
+            if (!this.db) await this.init();
+            return new Promise((resolve, reject) => {
+                const transaction = this.db.transaction(['subjects'], 'readonly');
+                const store = transaction.objectStore('subjects');
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        },
+
         async getCachedStudentByCode(studentCode) {
             if (!this.db) await this.init();
             return new Promise((resolve, reject) => {
