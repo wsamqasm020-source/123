@@ -3,12 +3,19 @@
  * يدعم العمل الكامل بدون إنترنت
  */
 
-const CACHE_NAME = 'attendance-v6';
+const CACHE_NAME = 'attendance-v7';
 
 // كل الملفات اللي تحتاجها الصفحات للعمل offline
 const STATIC_ASSETS = [
   '/',
   '/login',
+  '/scanner',
+  '/attendance',
+  '/students',
+  '/subjects',
+  '/generate',
+  '/student-detail',
+  '/settings',
   '/offline.html',
   '/static/css/style.css',
   '/static/css/bootstrap.min.css',
