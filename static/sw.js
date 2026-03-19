@@ -3,7 +3,7 @@
  * يدعم العمل الكامل بدون إنترنت
  */
 
-const CACHE_NAME = 'attendance-v8';
+const CACHE_NAME = 'attendance-v9';
 
 // كل الملفات اللي تحتاجها الصفحات للعمل offline
 const STATIC_ASSETS = [
@@ -48,11 +48,11 @@ self.addEventListener('install', (event) => {
         }
       }
 
-      // خزّن صفحات HTML
+      // خزّن صفحات HTML - نتجاهل أي redirect
       for (const url of HTML_PAGES) {
         try {
-          const response = await fetch(url, { cache: 'no-cache', redirect: 'follow' });
-          if (response.ok) {
+          const response = await fetch(url, { cache: 'no-cache' });
+          if (response.ok && response.type === 'basic') {
             await cache.put(url, response);
             console.log('[SW] Cached page:', url);
           }
