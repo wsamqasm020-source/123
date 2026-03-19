@@ -248,11 +248,14 @@ async function syncPendingAttendance() {
     const pending = JSON.parse(localStorage.getItem('pendingAttendance') || '[]');
     if (pending.length === 0) return;
     
-    let synced = 0;
-    const remaining = [];
-    
-    for (const record of pending) {
-        if (!record.qr_data || !record.subject_id) { synced++; continue; }
+    const valid = pending.filter(r => r.qr_data && r.subject_id);
+    if (valid.length === 0) {
+        localStorage.setItem('pendingAttendance', '[]');
+        return;
+    }
+
+    // ✅ إرسال كل الطلبات بالتوازي للسرعة
+    const results = await Promise.all(valid.map(async record => {
         try {
             const response = await fetch('/api/scan-qr', {
                 method: 'POST',
@@ -260,13 +263,17 @@ async function syncPendingAttendance() {
                 body: JSON.stringify({ qr_data: record.qr_data, subject_id: parseInt(record.subject_id) })
             });
             const data = await response.json();
-            if (data.success || response.status === 400) synced++;
-            else remaining.push(record);
-        } catch(e) { remaining.push(record); break; }
-    }
+            return { success: data.success || response.status === 400, record };
+        } catch(e) {
+            return { success: false, record };
+        }
+    }));
+
+    const remaining = results.filter(r => !r.success).map(r => r.record);
+    const synced = valid.length - remaining.length;
     
     localStorage.setItem('pendingAttendance', JSON.stringify(remaining));
-    if (synced > 0) showToast(`تمت مزامنة ${synced} سجل حضور`, 'success');
+    if (synced > 0) showToast(`✅ تمت مزامنة ${synced} سجل حضور`, 'success');
 }
 
 async function loadAllSubjects() {
@@ -505,11 +512,24 @@ async function processAttendance(qrData, subjectId) {
         }
         
     } catch (error) {
-        // offline - احفظ محلياً
+        // offline - احفظ محلياً واعرض اسم الطالب
         const pending = JSON.parse(localStorage.getItem('pendingAttendance') || '[]');
         pending.push({ qr_data: qrData, subject_id: parseInt(subjectId), id: Date.now() });
         localStorage.setItem('pendingAttendance', JSON.stringify(pending));
-        showToast('لا يوجد اتصال - تم الحفظ محلياً وسيرسل عند الاتصال', 'warning');
+        
+        // استخرج اسم الطالب من الـ QR
+        let studentName = 'الطالب';
+        if (qrData.includes('NAME:')) {
+            const match = qrData.match(/NAME:([^|]+)/);
+            if (match) studentName = match[1].trim();
+        } else {
+            const student = allStudents.find(s => 
+                s.qr_code === qrData || qrData.includes(s.student_code)
+            );
+            if (student) studentName = student.full_name;
+        }
+        
+        showToast(`✅ تم تسجيل حضور ${studentName} محلياً`, 'success');
     }
 }
 
