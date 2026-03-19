@@ -3,10 +3,12 @@
  * يدعم العمل الكامل بدون إنترنت
  */
 
-const CACHE_NAME = 'attendance-v5';
+const CACHE_NAME = 'attendance-v6';
 
 // كل الملفات اللي تحتاجها الصفحات للعمل offline
 const STATIC_ASSETS = [
+  '/',
+  '/login',
   '/offline.html',
   '/static/css/style.css',
   '/static/css/bootstrap.min.css',
@@ -81,22 +83,33 @@ self.addEventListener('fetch', (event) => {
           // ✅ فقط خزّن GET requests - POST ممنوع بالكاش
           if (response.ok && event.request.method === 'GET') {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, clone);
+              console.log('[SW] Cached page:', url.pathname);
+            });
           }
           return response;
         })
         .catch(async () => {
           console.log('[SW] Offline - serving from cache:', url.pathname);
+          
+          // جرب الصفحة المطلوبة من الـ cache
           const cached = await caches.match(event.request);
           if (cached) return cached;
 
-          // جرب الصفحة الرئيسية
+          // إذا فشلت، جرب الصفحة الرئيسية
           const root = await caches.match('/');
-          if (root) return root;
+          if (root) {
+            console.log('[SW] Serving home page from cache');
+            return root;
+          }
 
-          // صفحة offline
+          // جرب صفحة offline
           const offline = await caches.match('/offline.html');
-          if (offline) return offline;
+          if (offline) {
+            console.log('[SW] Serving offline page');
+            return offline;
+          }
 
           return new Response('<h1 style="font-family:Arial;text-align:center;margin-top:100px;direction:rtl">غير متصل بالإنترنت</h1>',
             { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
