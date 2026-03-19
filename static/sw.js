@@ -3,7 +3,7 @@
  * يدعم العمل الكامل بدون إنترنت
  */
 
-const CACHE_NAME = 'attendance-v7';
+const CACHE_NAME = 'attendance-v8';
 
 // كل الملفات اللي تحتاجها الصفحات للعمل offline
 const STATIC_ASSETS = [
@@ -33,16 +33,20 @@ self.addEventListener('install', (event) => {
 
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      // ✅ فقط الملفات الثابتة - لا نخزن صفحات HTML هنا لأن Flask يعمل redirects
-      for (const url of STATIC_ASSETS) {
+      // ✅ حفظ الملفات الأساسية فقط (بدون icons قد لا تكون موجودة)
+      const essentialAssets = STATIC_ASSETS.filter(url => !url.includes('/icons/'));
+      
+      for (const url of essentialAssets) {
         try {
           const response = await fetch(url, { cache: 'no-cache' });
           if (response.ok) {
             await cache.put(url, response);
             console.log('[SW] Cached:', url);
+          } else {
+            console.warn('[SW] Failed to cache:', url, 'Status:', response.status);
           }
         } catch (e) {
-          console.warn('[SW] Could not cache:', url);
+          console.warn('[SW] Could not cache:', url, e.message);
         }
       }
       console.log('[SW] Pre-caching done');
@@ -130,15 +134,23 @@ self.addEventListener('fetch', (event) => {
   // ✅ فقط GET requests
   if (event.request.method !== 'GET') return;
 
+  // تجاهل الملفات الديناميكية والـ uploads
+  if (url.pathname.startsWith('/static/uploads/')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
 
       return fetch(event.request)
         .then(response => {
-          if (response && response.ok) {
+          // فقط احفظ الملفات الثابتة الصغيرة (CSS, JS)
+          if (response && response.ok && (url.pathname.endsWith('.css') || url.pathname.endsWith('.js'))) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, clone).catch(e => console.warn('[SW] Could not cache:', url.pathname, e.message));
+            });
           }
           return response;
         })
