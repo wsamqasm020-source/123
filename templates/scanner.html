@@ -277,6 +277,18 @@ async function syncPendingAttendance() {
 }
 
 async function loadAllSubjects() {
+    // جرب تحميل من الـ cache أولاً
+    if (window.QRAttendance && window.QRAttendance.OfflineDB) {
+        try {
+            allSubjects = await window.QRAttendance.OfflineDB.getCachedSubjects();
+            console.log('Loaded subjects from cache:', allSubjects.length);
+        } catch (cacheError) {
+            console.error('Error loading subjects from cache:', cacheError);
+            allSubjects = [];
+        }
+    }
+
+    // ثم جرب تحديث من الخادم إذا online
     try {
         const response = await fetch('/api/get-subjects');
         const data = await response.json();
@@ -289,20 +301,23 @@ async function loadAllSubjects() {
         }
     } catch (error) {
         console.error('Error loading subjects from server:', error);
-        // جرب تحميل من الـ cache
-        if (window.QRAttendance && window.QRAttendance.OfflineDB) {
-            try {
-                allSubjects = await window.QRAttendance.OfflineDB.getCachedSubjects();
-                console.log('Loaded subjects from cache:', allSubjects.length);
-            } catch (cacheError) {
-                console.error('Error loading subjects from cache:', cacheError);
-                allSubjects = [];
-            }
-        }
+        // إذا فشل، ابقِ ما هو موجود من الـ cache
     }
 }
 
 async function loadStudentsList() {
+    // جرب تحميل من الـ cache أولاً
+    if (window.QRAttendance && window.QRAttendance.OfflineDB) {
+        try {
+            allStudents = await window.QRAttendance.OfflineDB.getCachedStudents();
+            console.log('Loaded students from cache:', allStudents.length);
+        } catch (cacheError) {
+            console.error('Error loading students from cache:', cacheError);
+            allStudents = [];
+        }
+    }
+
+    // ثم جرب تحديث من الخادم إذا online
     try {
         const response = await fetch('/api/get-students');
         const data = await response.json();
@@ -315,16 +330,7 @@ async function loadStudentsList() {
         }
     } catch (error) {
         console.error('Error loading students from server:', error);
-        // جرب تحميل من الـ cache
-        if (window.QRAttendance && window.QRAttendance.OfflineDB) {
-            try {
-                allStudents = await window.QRAttendance.OfflineDB.getCachedStudents();
-                console.log('Loaded students from cache:', allStudents.length);
-            } catch (cacheError) {
-                console.error('Error loading students from cache:', cacheError);
-                allStudents = [];
-            }
-        }
+        // إذا فشل، ابقِ ما هو موجود من الـ cache
     }
 }
 
