@@ -23,6 +23,11 @@ from database import (
 app = Flask(__name__)
 app.secret_key = 'qr_attendance_secret_key_2026'
 
+# ✅ إبقاء الـ session حية لمدة 7 أيام بدل انتهائها عند إغلاق المتصفح
+from datetime import timedelta
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 # ✅ تهيئة قاعدة البيانات عند بدء التشغيل
 with app.app_context():
     init_database()
@@ -143,6 +148,17 @@ def offline_page():
     return send_from_directory('static', 'offline.html')
 
 
+@app.route('/api/ping')
+def api_ping():
+    """✅ Keep-alive endpoint — بدون login_required حتى يشتغل دائماً"""
+    if 'user_id' in session:
+        # جدد الـ session تلقائياً
+        session.permanent = True
+        session.modified = True
+        return jsonify({'status': 'ok', 'authenticated': True})
+    return jsonify({'status': 'ok', 'authenticated': False}), 200
+
+
 # ============================================
 # Routes تسجيل الدخول (بدون حماية)
 # ============================================
@@ -163,6 +179,7 @@ def login():
         user = verify_user(username, password)
         
         if user:
+            session.permanent = True  # ✅ ابقِ الـ session حية
             session['user_id'] = user['id']
             session['username'] = user['username']
             flash('تم تسجيل الدخول بنجاح!', 'success')
@@ -733,4 +750,4 @@ def change_password_admin():
 
 if __name__ == '__main__':
     init_database()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)
