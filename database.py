@@ -8,7 +8,15 @@ import hashlib
 import os
 from datetime import datetime
 
-DATABASE = 'attendance.db'
+import os
+
+# ✅ استخدم Volume على Railway، أو المجلد الحالي محلياً
+DATA_DIR = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH', '')
+if DATA_DIR:
+    os.makedirs(DATA_DIR, exist_ok=True)
+    DATABASE = os.path.join(DATA_DIR, 'attendance.db')
+else:
+    DATABASE = 'attendance.db'
 
 def get_db_connection():
     """إنشاء اتصال بقاعدة البيانات"""
@@ -90,13 +98,28 @@ def init_database():
     
     conn.commit()
 
-    # ✅ Migration: أضف حقل qr_image إذا ما موجود (للقواعد القديمة)
+    # ✅ Migration: أضف حقل qr_image إذا ما موجود
     try:
         cursor.execute('ALTER TABLE students ADD COLUMN qr_image TEXT')
         conn.commit()
-        print('[DB] Migration: qr_image column added successfully')
     except Exception:
-        pass  # الحقل موجود مسبقاً - طبيعي
+        pass
+
+    # ✅ استورد البيانات من import_data.sql عند أول تشغيل على Railway
+    import_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'import_data.sql')
+    if os.path.exists(import_file):
+        try:
+            with open(import_file, 'r', encoding='utf-8') as f:
+                for stmt in f.read().strip().split('\n'):
+                    if stmt.strip():
+                        try:
+                            cursor.execute(stmt)
+                        except Exception:
+                            pass
+            conn.commit()
+            print('[DB] ✅ Data imported from import_data.sql')
+        except Exception as e:
+            print(f'[DB] Import error: {e}')
 
     conn.close()
 
