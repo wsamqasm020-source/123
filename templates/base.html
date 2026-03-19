@@ -622,23 +622,6 @@
         (function() {
             'use strict';
             
-            // معالج تسجيل الخروج
-            document.addEventListener('click', function(e) {
-                const logoutLink = e.target.closest('a[href*="/logout"]');
-                if (logoutLink) {
-                    e.preventDefault();
-                    if (navigator.onLine) {
-                        window.location.href = logoutLink.href;
-                    } else {
-                        // Offline - مسح البيانات المحلية
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        // واعيد توجيه الصفحة للرئيسية
-                        window.location.href = '/';
-                    }
-                }
-            });
-            
             // Configuration - ✅ تم التعديل: استخدام /sw.js من الجذر
             const SW_PATH = '/sw.js';
             const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour

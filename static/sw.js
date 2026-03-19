@@ -65,8 +65,8 @@ self.addEventListener('fetch', (event) => {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
   if (url.origin !== location.origin) return;
 
-  // ===== لا تتدخل في تسجيل الدخول =====
-  if (url.pathname === '/login') return;
+  // ===== لا تتدخل في تسجيل الدخول والخروج =====
+  if (url.pathname === '/login' || url.pathname === '/logout') return;
 
   // ===== API: لا تتدخل - اتركها تروح للسيرفر مباشرة =====
   if (url.pathname.startsWith('/api/')) {
