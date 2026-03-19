@@ -3,7 +3,7 @@
  * يدعم العمل الكامل بدون إنترنت
  */
 
-const CACHE_NAME = 'attendance-v8';
+const CACHE_NAME = 'attendance-v9';
 
 // كل الملفات اللي تحتاجها الصفحات للعمل offline
 const STATIC_ASSETS = [
@@ -78,8 +78,8 @@ self.addEventListener('fetch', (event) => {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
   if (url.origin !== location.origin) return;
 
-  // ===== لا تتدخل في تسجيل الدخول والخروج =====
-  if (url.pathname === '/login' || url.pathname === '/logout') return;
+  // ===== لا تتدخل في تسجيل الدخول والخروج والإعدادات =====
+  if (url.pathname === '/login' || url.pathname === '/logout' || url.pathname === '/update-settings') return;
 
   // ===== API: لا تتدخل - اتركها تروح للسيرفر مباشرة =====
   if (url.pathname.startsWith('/api/')) {
