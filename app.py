@@ -23,6 +23,10 @@ from database import (
 app = Flask(__name__)
 app.secret_key = 'qr_attendance_secret_key_2026'
 
+# ✅ تهيئة قاعدة البيانات عند بدء التشغيل
+with app.app_context():
+    init_database()
+
 # فترة المنع بين تسجيلات الحضور (بالدقائق)
 COOLDOWN_MINUTES = 15
 
@@ -127,23 +131,8 @@ def format_remaining_time(seconds):
 
 @app.route('/sw.js')
 def service_worker():
-    """Service Worker - يلغي تسجيل نفسه لحل مشاكل الـ redirect"""
-    sw_content = """
-// Service Worker - يلغي تسجيل نفسه
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-      .then(() => self.registration.unregister())
-  );
-});
-"""
-    response = app.response_class(
-        response=sw_content,
-        status=200,
-        mimetype='application/javascript'
-    )
+    """تقديم Service Worker"""
+    response = send_from_directory('static', 'sw.js', mimetype='application/javascript')
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return response
 
