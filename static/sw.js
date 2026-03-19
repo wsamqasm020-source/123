@@ -119,10 +119,11 @@ self.addEventListener('fetch', (event) => {
   }
 
   // ===== ملفات ثابتة: كاش أولاً، شبكة ثانياً =====
+  // ✅ فقط GET requests
   if (event.request.method !== 'GET') return;
 
-  // تجاهل الملفات الديناميكية
-  if (url.pathname.includes('/uploads/') || url.pathname.includes('/static/uploads/')) {
+  // تجاهل الملفات الديناميكية والـ uploads
+  if (url.pathname.startsWith('/static/uploads/')) {
     return;
   }
 
@@ -132,15 +133,11 @@ self.addEventListener('fetch', (event) => {
 
       return fetch(event.request)
         .then(response => {
-          // احفظ فقط CSS و JS والملفات الثابتة الصغيرة
-          if (response && response.ok && (
-            url.pathname.endsWith('.css') || 
-            url.pathname.endsWith('.js') ||
-            url.pathname.startsWith('/static/icons/')
-          )) {
+          // فقط احفظ الملفات الثابتة الصغيرة (CSS, JS)
+          if (response && response.ok && (url.pathname.endsWith('.css') || url.pathname.endsWith('.js'))) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, clone).catch(() => {});
+              cache.put(event.request, clone).catch(e => console.warn('[SW] Could not cache:', url.pathname, e.message));
             });
           }
           return response;
