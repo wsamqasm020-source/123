@@ -374,6 +374,27 @@ function onGradeChange() {
     courseSelect.disabled = false;
 }
 
+// ✅ دالة مساعدة: تستخرج قيمة المرحلة من أي اسم حقل ممكن
+function getSubjectGrade(subject) {
+    return subject.grade 
+        || subject.stage 
+        || subject.level 
+        || subject.مرحلة 
+        || subject.grade_name 
+        || '';
+}
+
+// ✅ دالة مساعدة: تستخرج قيمة الكورس من أي اسم حقل ممكن
+function getSubjectCourse(subject) {
+    return subject.course_type 
+        || subject.semester 
+        || subject.department 
+        || subject.term 
+        || subject.course 
+        || subject.كورس 
+        || '';
+}
+
 // ✅ عند تغيير الكورس
 function onCourseChange() {
     const gradeSelect = document.getElementById('gradeSelect');
@@ -389,24 +410,61 @@ function onCourseChange() {
         subjectSelect.disabled = true;
         return;
     }
+
+    // ✅ تشخيص: اطبع أول مادة في الـ console لمعرفة أسماء الحقول
+    if (allSubjects.length > 0) {
+        console.log('📋 بيانات المادة (للتشخيص):', allSubjects[0]);
+        console.log('📋 المرحلة المختارة:', selectedGrade, '| الكورس المختار:', selectedCourse);
+    }
     
-    // ✅ فلترة حسب المرحلة AND الكورس
+    // ✅ فلترة ذكية تتعامل مع أي أسماء حقول
     const filteredSubjects = allSubjects.filter(subject => {
-        const subjectGrade = subject.grade || 'الأولى';
-        const subjectCourse = subject.course_type || subject.department || 'أول';
-        return subjectGrade === selectedGrade && subjectCourse === selectedCourse;
+        const subjectGrade = getSubjectGrade(subject);
+        const subjectCourse = getSubjectCourse(subject);
+
+        // مطابقة مرنة: تتجاهل الفراغات وتقارن جزئياً
+        const gradeMatch = !subjectGrade 
+            || subjectGrade.trim() === selectedGrade.trim()
+            || subjectGrade.includes(selectedGrade)
+            || selectedGrade.includes(subjectGrade);
+
+        const courseMatch = !subjectCourse
+            || subjectCourse.trim() === selectedCourse.trim()
+            || subjectCourse.includes(selectedCourse)
+            || selectedCourse.includes(subjectCourse);
+
+        return gradeMatch && courseMatch;
     });
+
+    console.log('📋 المواد بعد الفلتر:', filteredSubjects.length, 'من', allSubjects.length);
     
     if (filteredSubjects.length === 0) {
-        subjectSelect.innerHTML += '<option disabled>لا توجد مواد لهذا الكورس</option>';
-        subjectSelect.disabled = true;
+        // ✅ إذا ما وجد فلتر مناسب، اعرض كل المواد كحل احتياطي
+        console.warn('⚠️ ما وجدت مواد بالفلتر — سيتم عرض كل المواد');
+        subjectSelect.innerHTML = '<option value="" selected disabled>اختر المادة</option>';
+        
+        if (allSubjects.length === 0) {
+            subjectSelect.innerHTML += '<option disabled>لا توجد مواد متاحة</option>';
+            subjectSelect.disabled = true;
+        } else {
+            // عرض كل المواد بدون فلتر
+            allSubjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject.id;
+                option.textContent = subject.name || subject.subject_name || 'مادة غير معروفة';
+                option.setAttribute('data-teacher', subject.teacher_name || '');
+                option.setAttribute('data-course', `كورس ${selectedCourse}`);
+                subjectSelect.appendChild(option);
+            });
+            subjectSelect.disabled = false;
+        }
     } else {
         const courseType = `كورس ${selectedCourse}`;
         filteredSubjects.forEach(subject => {
             const option = document.createElement('option');
             option.value = subject.id;
-            option.textContent = `${subject.name} (${courseType})`;
-            option.setAttribute('data-teacher', subject.teacher_name);
+            option.textContent = `${subject.name || subject.subject_name} (${courseType})`;
+            option.setAttribute('data-teacher', subject.teacher_name || '');
             option.setAttribute('data-course', courseType);
             subjectSelect.appendChild(option);
         });
